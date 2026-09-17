@@ -631,7 +631,8 @@ registerStatsRoutes(app);
     });
   }
 
-  const server = app.listen(PORT, "0.0.0.0", () => {    console.log(`Server running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 
   // Phase 6 — register the graceful-shutdown handlers. The same
