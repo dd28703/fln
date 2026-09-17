@@ -8,15 +8,12 @@ import React, { Suspense, lazy, useState } from 'react';
 import { Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import { User, UserRole } from '../types';
 
-// Loaded only in an explicitly-flagged demo build — see DemoLoginPanel.
-// The ternary is deliberate: Vite substitutes the env literal at build time, so in
-// a normal build this folds to `null` and Rollup drops the dynamic import
-// altogether. A plain `lazy(() => import(...))` would still emit the chunk as a
-// fetchable file even though nothing renders it.
-const DemoLoginPanel =
-  import.meta.env.VITE_ENABLE_DEMO_LOGINS === 'true'
-    ? lazy(() => import('./DemoLoginPanel'))
-    : null;
+// Loaded in development builds so the quick-select demo role buttons are
+// visible on the login page. In production (`import.meta.env.MODE !==
+// 'development'`) the import is dropped so the panel and the sample
+// account addresses never ship to a deployed bundle.
+const IS_DEV = import.meta.env.MODE === 'development';
+const DemoLoginPanel = IS_DEV ? lazy(() => import('./DemoLoginPanel')) : null;
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, user: User) => void;
@@ -30,18 +27,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHo
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Demo one-click sign-in cards. OFF unless VITE_ENABLE_DEMO_LOGINS is explicitly
-  // "true" at build time, because this panel previously shipped to production and
-  // published a working Superadmin credential on the public login page.
+  // Demo one-click sign-in cards. Visible in development builds so testers
+  // can switch roles with a single click. In production (`MODE !==
+  // 'development'`) the panel is dropped from the bundle entirely — the
+  // sample addresses never ship to a deployed build.
   //
-  // The password is not hardcoded any more — it comes from
-  // VITE_DEMO_LOGIN_PASSWORD alongside the flag. A build with the flag on but no
-  // password set renders nothing, so a partial config cannot reveal the old value.
-  // The panel itself is a lazy import so the sample addresses stay out of the
-  // production bundle entirely.
-  const showDemoLogins =
-    import.meta.env.VITE_ENABLE_DEMO_LOGINS === 'true' &&
-    !!import.meta.env.VITE_DEMO_LOGIN_PASSWORD;
+  // The password defaults to the backend's SEED_DEMO_PASSWORD_HASH source
+  // literal (`Fln@2026`) so the buttons work out-of-the-box in dev. Override
+  // via VITE_DEMO_LOGIN_PASSWORD if your local seed uses a different value.
+  const showDemoLogins = IS_DEV;
+  const demoLoginPassword =
+    (import.meta.env as any).VITE_DEMO_LOGIN_PASSWORD || 'Fln@2026';
 
   const handleLogin = async (e?: React.FormEvent, customEmail?: string, customPass?: string) => {
   if (e) e.preventDefault();
@@ -162,7 +158,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToHo
         {showDemoLogins && DemoLoginPanel && (
           <Suspense fallback={null}>
             <DemoLoginPanel
-              password={import.meta.env.VITE_DEMO_LOGIN_PASSWORD as string}
+              password={demoLoginPassword}
               onSelect={(demoEmail, demoPass) => handleLogin(undefined, demoEmail, demoPass)}
             />
           </Suspense>
